@@ -1,0 +1,30 @@
+# Environment
+.env
+venv/
+env/
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# Storage (uploaded files should not be committed)
+storage/node1/*
+storage/node2/*
+storage/node3/*
+!storage/node1/.gitkeep
+!storage/node2/.gitkeep
+!storage/node3/.gitkeep
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage

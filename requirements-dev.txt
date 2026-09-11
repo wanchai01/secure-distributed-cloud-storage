@@ -1,0 +1,9 @@
+# Test-only dependencies for Phase 9. Not part of the approved
+# backend runtime stack (section 1 of the spec) - these are testing
+# tools used to verify the backend, not technologies the backend
+# itself is built on. Install in addition to requirements.txt:
+#
+#   pip install -r requirements.txt -r requirements-dev.txt
+
+pytest==8.2.2
+httpx==0.27.0

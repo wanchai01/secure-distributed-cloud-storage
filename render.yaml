@@ -1,0 +1,45 @@
+# Render Blueprint for the "actually free forever" setup:
+#   - Render free web service (this app)
+#   - Neon for PostgreSQL (permanent free tier, not Render's own
+#     Postgres, which expires 30 days after creation)
+#   - Cloudflare R2 for file/face storage (Render's free tier has no
+#     persistent disk at all - see DEPLOYMENT.md)
+#
+# DATABASE_URL and the R2_* values are intentionally left for you to
+# fill in during "Apply" (sync: false) rather than auto-provisioned,
+# since they point at Neon/R2, not a Render-managed resource.
+
+services:
+  - type: web
+    name: secure-distributed-cloud-storage
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /monitor/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # paste your Neon connection string here
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "20"
+      - key: FACE_VERIFY_THRESHOLD
+        value: "0.90"
+      - key: APP_NAME
+        value: Secure Distributed Cloud Storage
+      - key: APP_ENV
+        value: production
+      - key: STORAGE_BACKEND
+        value: r2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
