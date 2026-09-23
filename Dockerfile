@@ -1,6 +1,10 @@
-# Production image for Railway / Render / any Docker host.
-# Not used for local development (README Phase 0 uses a plain venv) -
-# this exists purely for deployment.
+# Production image for Railway / Render / a self-hosted Docker host
+# (e.g. Raspberry Pi - see DEPLOY_RASPBERRY_PI.md). Not used for local
+# development (README Phase 0 uses a plain venv) - this exists purely
+# for deployment. python:3.10-slim is a multi-arch image, so this
+# same Dockerfile builds correctly on amd64 (cloud) and arm64
+# (Raspberry Pi 4/5 running 64-bit Raspberry Pi OS) without changes -
+# Docker pulls the right architecture automatically.
 
 FROM python:3.10-slim
 

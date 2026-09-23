@@ -1,0 +1,50 @@
+# Brings up the app + PostgreSQL together with one command. Built for
+# self-hosting (e.g. a Raspberry Pi) where, unlike Render's free tier,
+# the filesystem is genuinely persistent - so STORAGE_BACKEND=local
+# (the default) is the right choice here, no R2 needed.
+#
+# Usage:
+#   1. Create a .env file next to this one (see .env.pi.example)
+#   2. docker compose up -d --build
+#   3. curl http://localhost:8000/monitor/health
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cloud_storage
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/cloud_storage
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      MAX_UPLOAD_SIZE_MB: "20"
+      FACE_VERIFY_THRESHOLD: "0.90"
+      STORAGE_BACKEND: local
+      APP_NAME: Secure Distributed Cloud Storage
+      APP_ENV: production
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_storage:/app/storage
+
+volumes:
+  pgdata:
+  app_storage:

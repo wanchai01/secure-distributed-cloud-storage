@@ -14,10 +14,14 @@ dashboard.
 ## Status
 
 All 9 phases are implemented — see the phase-by-phase sections below
-for what was built and how to test each one. For running this
-in the cloud instead of locally, see **[DEPLOYMENT.md](DEPLOYMENT.md)**
-(Railway / Render — not Cloudflare Workers, which can't run this
-stack; see that file for why).
+for what was built and how to test each one. For running this in the
+cloud instead of locally, see **[DEPLOYMENT.md](DEPLOYMENT.md)**
+(Render + Neon + Cloudflare R2 — genuinely free, forever) or
+**[QUICKSTART_DEPLOY.md](QUICKSTART_DEPLOY.md)** for the condensed
+checklist version. For self-hosting on your own hardware instead, see
+**[DEPLOY_RASPBERRY_PI.md](DEPLOY_RASPBERRY_PI.md)** or
+**[QUICKSTART_RASPBERRY_PI.md](QUICKSTART_RASPBERRY_PI.md)** for its
+condensed checklist.
 
 - [x] Phase 0 — Project setup, FastAPI bootstrap, PostgreSQL connection check
 - [x] Phase 1 — Database schema (users, files, storage_nodes, login_logs, audit_logs, face_auth_logs)
@@ -701,10 +705,13 @@ utilities just to fill the files.
 ## Web UI — `frontend/index.html`
 
 A dashboard-style web UI (per section 1: "Frontend ในระยะแรกให้ทำเป็น
-Web UI ธรรมดา"), styled after a sidebar admin-console layout: one
-self-contained HTML file, no build step, no npm install. Covers every
-endpoint from Phases 2-8: Overview (stats + charts), My Files, Node
-Manager, Face Authentication, System Logs, Admin Panel, Settings.
+Web UI ธรรมดา"), styled as a **Modern Enterprise Cloud Storage / Cyber
+Security Ops Console**: dark charcoal base, electric blue + cyan
+accent, subtle glassmorphism on cards, collapsible sidebar with
+section grouping (Platform / Management). One self-contained HTML
+file, no build step, no npm install. Same API contract throughout —
+every enhancement pass has been visual/UX only; no endpoint, request
+shape, or backend behavior has ever changed.
 
 **CORS is enabled wide-open** (`allow_origins=["*"]`) in
 `backend/main.py` specifically so this file can call the API from a
@@ -721,38 +728,49 @@ uvicorn backend.main:app --reload
 Then just open `frontend/index.html` directly in a browser (double-
 click it, or right-click → Open with → your browser). No server
 needed for the frontend itself — it's a static file that talks to
-your API at `http://127.0.0.1:8000` (editable in the top bar or the
-Settings page if your backend runs elsewhere).
+your API at `http://127.0.0.1:8000` (editable in **Settings**).
 
 ### What's on each page
 
-- **Overview** — 4 stat cards (users/files/storage/nodes), a "storage
-  by node" bar chart, a "your file types" donut chart (computed
-  client-side from your actual files' extensions), recent files, and
-  node status. If you're an admin, two extra panels appear: login
-  activity by day and recent audit-log activity — both real data from
-  `/admin/logins` and `/admin/audit-logs`.
-- **My Files** — upload, list, download, delete. Search bar filters by filename.
-- **Node Manager** — live per-node cards + comparison bars. Public endpoint, works even logged out.
+- **Overview** — stat cards, a "storage by node" bar chart, a "your
+  file types" donut chart (computed client-side from your actual
+  files' extensions), recent files, and node status. Admins get two
+  extra panels: login activity by day and a security activity
+  timeline — both real data from `/admin/logins` and
+  `/admin/audit-logs`.
+- **My Files** — drag-and-drop upload with a real progress bar (via
+  `XMLHttpRequest`, tracking actual bytes sent — not a fake timer),
+  type filter, sort, list/grid view toggle, and a confirmation dialog
+  before delete.
+- **Storage (Node Manager)** — live per-node cards + comparison bars. Public endpoint, works even logged out.
+- **Security Center** — subsystem status (auth/JWT/DB/file-integrity/face-auth), and for admins: successful/failed login counts, face-verification count, and a security activity timeline. All computed from existing endpoints — no new backend routes.
 - **Face Authentication** — register/verify with real photos; same prototype warning as the API.
 - **System Logs** — public health status for everyone; login & audit tables for admins only.
 - **Admin Panel** — the 5 listing endpoints, admin-only, search bar filters whichever table is loaded.
-- **Settings** — API base URL, session info, logout, and a short "about this build" note.
+- **Settings** — API base URL, theme toggle, session info, logout, and a short "about this build" note.
 
-**All charts use real data — nothing is fabricated.** One deliberate
-difference from a typical reference dashboard: there's no "storage
-over the last 7 days" trend line, because this backend doesn't store
-historical snapshots (only current totals) — showing a fake trend
-would be misleading, so it's a live per-node bar chart instead. Login
-activity and recent-activity panels only appear for admins, because
-that's the only role with an endpoint that returns them
-(`/admin/logins`, `/admin/audit-logs`) — a regular user has no
-personal activity-log endpoint to draw from.
+### Design notes
 
-Charts (bar + donut) are hand-drawn SVG, not a charting library — no
-CDN dependency to go stale or fail to load.
+- **All data is real — nothing is fabricated.** There's no "storage
+  over the last 7 days" trend line, because this backend doesn't store
+  historical snapshots (only current totals) — a fake trend would be
+  misleading, so it's a live per-node bar chart instead. The
+  notification bell and Security Center's counters/timeline only
+  populate for admins, because that's the only role with endpoints
+  that return them (`/admin/logins`, `/admin/audit-logs`) — a regular
+  user has no personal activity-log endpoint to draw from.
+- Charts (bar + donut) are hand-drawn SVG, not a charting library — no
+  CDN dependency to go stale or fail to load.
+- Light/dark theme toggle and the sidebar collapse state are
+  in-memory only (consistent with the session token) — nothing is
+  written to browser storage anywhere in this file.
+- Every state a real product needs is covered: loading (skeleton
+  rows), empty (icon + message + next action), and error (retry
+  button) — not just the happy path.
 
 I verified this file with a headless browser against a mock server
-during development — logged in, walked every page, checked the
-charts rendered with real numbers, and checked a mobile viewport
-(sidebar collapses to icons-only under 900px).
+during development — logged in, walked every page including the new
+Security Center, opened the delete-confirmation modal, toggled
+light/dark theme, collapsed the sidebar, opened the notification
+dropdown, and checked a mobile viewport — before shipping it, not
+after.
