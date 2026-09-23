@@ -389,6 +389,19 @@
   .progress-track{height:7px; background:var(--panel-3); border-radius:6px; overflow:hidden;}
   .progress-fill{height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius:6px; width:0%; transition:width .2s ease;}
 
+  .face-scanner{display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 0 4px;}
+  .face-scanner-frame{position:relative; width:190px; height:190px; border-radius:50%; overflow:hidden; background:var(--panel-2); border:1px solid var(--border); flex-shrink:0;}
+  .face-scanner-frame video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block;}
+  .face-scanner-frame .fs-placeholder{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-faint);}
+  .face-scanner-frame .fs-placeholder svg{width:44px; height:44px; opacity:0.5;}
+  .face-scanner-ring{position:absolute; inset:0; border-radius:50%; border:3px solid transparent; pointer-events:none; transition:border-color .2s, box-shadow .2s;}
+  .face-scanner.scanning .face-scanner-ring{border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); animation:fsPulse 1.6s ease-in-out infinite;}
+  .face-scanner.captured .face-scanner-frame{border-color:var(--success);}
+  .face-scanner.captured .face-scanner-ring{border-color:var(--success); box-shadow:0 0 0 4px var(--success-soft);}
+  @keyframes fsPulse{0%,100%{box-shadow:0 0 0 4px var(--accent-soft);} 50%{box-shadow:0 0 0 10px transparent;}}
+  .face-scanner-status{font-size:11.5px; color:var(--text-dim); font-family:var(--mono); text-align:center;}
+  .face-scanner-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:center;}
+
   ::-webkit-scrollbar{width:8px; height:8px;}
   ::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
   ::-webkit-scrollbar-track{background:transparent;}
@@ -566,11 +579,26 @@
           </form>
           <form id="faceLoginForm" style="display:none;">
             <div class="field"><label>Username</label><input type="text" id="faceLoginUsername" required autocomplete="username"></div>
-            <div class="field"><label>Face photo</label><input type="file" id="faceLoginFile" accept="image/*" required></div>
-            <div class="upload-steps" id="faceLoginSteps" style="margin-bottom:14px;">
+            <div class="face-scanner" id="faceLoginScanner">
+              <div class="face-scanner-frame">
+                <video id="faceLoginVideo" autoplay playsinline muted></video>
+                <div class="fs-placeholder" id="faceLoginPlaceholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+                <canvas id="faceLoginCanvas" style="display:none;"></canvas>
+                <div class="face-scanner-ring"></div>
+              </div>
+              <div class="face-scanner-status" id="faceLoginScanStatus">Camera off</div>
+              <div class="face-scanner-actions">
+                <button type="button" class="btn secondary small" id="faceLoginStartCam">Start camera</button>
+                <button type="button" class="btn small" id="faceLoginCapture" style="display:none;">Capture</button>
+                <button type="button" class="btn secondary small" id="faceLoginRetake" style="display:none;">Retake</button>
+              </div>
+            </div>
+            <p class="hint" id="faceLoginFallbackHint" style="text-align:center;">No camera? <button type="button" class="link-btn" id="faceLoginUseFile">Upload a photo instead</button></p>
+            <div class="field" id="faceLoginFileField" style="display:none;"><label>Face photo</label><input type="file" id="faceLoginFile" accept="image/*"></div>
+            <div class="upload-steps" id="faceLoginSteps" style="margin:4px 0 14px; justify-content:center;">
               <span class="upload-step" data-step="uploading">Uploading</span><span class="upload-step" data-step="processing">Matching face</span><span class="upload-step" data-step="done">Signed in</span>
             </div>
-            <button class="btn" type="submit" style="width:100%;">Verify &amp; sign in</button>
+            <button class="btn" type="submit" style="width:100%;" id="faceLoginSubmitBtn" disabled>Verify &amp; sign in</button>
             <p class="hint" style="margin-top:10px;">You must have registered your face already (Face Auth page, after a normal login) for this to work. Prototype matching — no liveness check, not for anything sensitive.</p>
           </form>
           <p class="hint" id="authHint">Session token is kept in memory only — refreshing this page logs you out. Nothing is written to browser storage.</p>
@@ -702,21 +730,51 @@
         <div class="two-col">
           <div class="card">
             <h2>Register your face</h2>
-            <p class="sub">Upload a clear, front-facing photo.</p>
-            <div class="upload-steps" id="faceRegisterSteps" style="margin-bottom:14px;">
-              <span class="upload-step" data-step="uploading">Uploading photo</span><span class="upload-step" data-step="processing">Detecting &amp; encoding</span><span class="upload-step" data-step="done">Saved</span>
-            </div>
+            <p class="sub">Center your face in frame and capture, or upload a clear front-facing photo.</p>
             <form id="faceRegisterForm">
-              <div class="field"><input type="file" id="faceRegisterFile" accept="image/*" required></div>
-              <button class="btn" type="submit">Register face</button>
+              <div class="face-scanner" id="faceRegisterScanner">
+                <div class="face-scanner-frame">
+                  <video id="faceRegisterVideo" autoplay playsinline muted></video>
+                  <div class="fs-placeholder" id="faceRegisterPlaceholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+                  <canvas id="faceRegisterCanvas" style="display:none;"></canvas>
+                  <div class="face-scanner-ring"></div>
+                </div>
+                <div class="face-scanner-status" id="faceRegisterScanStatus">Camera off</div>
+                <div class="face-scanner-actions">
+                  <button type="button" class="btn secondary small" id="faceRegisterStartCam">Start camera</button>
+                  <button type="button" class="btn small" id="faceRegisterCapture" style="display:none;">Capture</button>
+                  <button type="button" class="btn secondary small" id="faceRegisterRetake" style="display:none;">Retake</button>
+                </div>
+              </div>
+              <p class="hint" id="faceRegisterFallbackHint" style="text-align:center;">No camera? <button type="button" class="link-btn" id="faceRegisterUseFile">Upload a photo instead</button></p>
+              <div class="field" id="faceRegisterFileField" style="display:none;"><input type="file" id="faceRegisterFile" accept="image/*"></div>
+              <div class="upload-steps" id="faceRegisterSteps" style="margin:4px 0 14px; justify-content:center;">
+                <span class="upload-step" data-step="uploading">Uploading photo</span><span class="upload-step" data-step="processing">Detecting &amp; encoding</span><span class="upload-step" data-step="done">Saved</span>
+              </div>
+              <button class="btn" type="submit" style="width:100%;" id="faceRegisterSubmitBtn" disabled>Register face</button>
             </form>
           </div>
           <div class="card">
             <h2>Verify a face</h2>
-            <p class="sub">Upload a photo to compare against your registered face.</p>
+            <p class="sub">Center your face in frame and capture, or upload a photo to compare against your registered face.</p>
             <form id="faceVerifyForm">
-              <div class="field"><input type="file" id="faceVerifyFile" accept="image/*" required></div>
-              <button class="btn" type="submit">Verify</button>
+              <div class="face-scanner" id="faceVerifyScanner">
+                <div class="face-scanner-frame">
+                  <video id="faceVerifyVideo" autoplay playsinline muted></video>
+                  <div class="fs-placeholder" id="faceVerifyPlaceholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+                  <canvas id="faceVerifyCanvas" style="display:none;"></canvas>
+                  <div class="face-scanner-ring"></div>
+                </div>
+                <div class="face-scanner-status" id="faceVerifyScanStatus">Camera off</div>
+                <div class="face-scanner-actions">
+                  <button type="button" class="btn secondary small" id="faceVerifyStartCam">Start camera</button>
+                  <button type="button" class="btn small" id="faceVerifyCapture" style="display:none;">Capture</button>
+                  <button type="button" class="btn secondary small" id="faceVerifyRetake" style="display:none;">Retake</button>
+                </div>
+              </div>
+              <p class="hint" id="faceVerifyFallbackHint" style="text-align:center;">No camera? <button type="button" class="link-btn" id="faceVerifyUseFile">Upload a photo instead</button></p>
+              <div class="field" id="faceVerifyFileField" style="display:none;"><input type="file" id="faceVerifyFile" accept="image/*"></div>
+              <button class="btn" type="submit" style="width:100%; margin-top:4px;" id="faceVerifySubmitBtn" disabled>Verify</button>
             </form>
             <div id="faceResult"></div>
           </div>
@@ -1099,6 +1157,125 @@ async function completeLogin(accessToken, welcomeMsg){
   showView('overview');
   refreshBell();
 }
+// Reusable "look like Face ID" camera capture widget. Live video in a
+// circular frame with a glowing ring while scanning; Capture freezes a
+// square JPEG snapshot into a canvas and stops the camera stream. Every
+// getUserMedia call is wrapped in try/catch and there's always an
+// "Upload a photo instead" fallback - camera access can be denied,
+// unavailable (no device, non-HTTPS origin), or simply not supported.
+function createFaceScanner(ids){
+  const el = {}; Object.keys(ids).forEach(function(k){ el[k] = document.getElementById(ids[k]); });
+  let stream = null, blob = null;
+
+  function setSubmittable(on){ if(el.submitBtn) el.submitBtn.disabled = !on; }
+
+  async function start(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      el.status.textContent = 'Camera not supported in this browser — use upload instead';
+      return;
+    }
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      el.video.srcObject = stream;
+      el.placeholder.style.display = 'none';
+      el.scanner.classList.add('scanning');
+      el.scanner.classList.remove('captured');
+      el.status.textContent = 'Position your face in the frame';
+      el.startBtn.style.display = 'none';
+      el.captureBtn.style.display = 'inline-block';
+      el.retakeBtn.style.display = 'none';
+    }catch(err){
+      el.status.textContent = 'Camera unavailable (' + err.name + ') — use upload instead';
+    }
+  }
+  function stop(){ if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } }
+  function capture(){
+    return new Promise(function(resolve){
+      const size = 480;
+      el.canvas.width = size; el.canvas.height = size;
+      const ctx = el.canvas.getContext('2d');
+      const vw = el.video.videoWidth || size, vh = el.video.videoHeight || size;
+      const side = Math.min(vw, vh);
+      const sx = (vw - side) / 2, sy = (vh - side) / 2;
+      ctx.save(); ctx.translate(size, 0); ctx.scale(-1, 1); // mirror, matches the preview
+      ctx.drawImage(el.video, sx, sy, side, side, 0, 0, size, size);
+      ctx.restore();
+      el.canvas.toBlob(function(b){ resolve(b); }, 'image/jpeg', 0.9);
+    });
+  }
+  el.startBtn.addEventListener('click', start);
+  el.captureBtn.addEventListener('click', async function(){
+    blob = await capture();
+    stop();
+    el.scanner.classList.remove('scanning');
+    el.scanner.classList.add('captured');
+    el.status.textContent = 'Photo captured';
+    el.captureBtn.style.display = 'none';
+    el.retakeBtn.style.display = 'inline-block';
+    setSubmittable(true);
+  });
+  el.retakeBtn.addEventListener('click', function(){
+    blob = null;
+    setSubmittable(false);
+    start();
+  });
+  if(el.useFileBtn){
+    el.useFileBtn.addEventListener('click', function(){
+      stop();
+      el.scanner.style.display = 'none';
+      el.fallbackHint.style.display = 'none';
+      el.fileField.style.display = 'block';
+      el.fileInput.required = true;
+      setSubmittable(!!el.fileInput.files[0]);
+    });
+    el.fileInput.addEventListener('change', function(){ setSubmittable(!!el.fileInput.files[0]); });
+  }
+  return {
+    getBlob: function(){ return blob; },
+    usingFile: function(){ return el.fileField.style.display !== 'none'; },
+    getFile: function(){ return el.fileInput.files[0] || null; },
+    stopCamera: stop,
+    reset: function(){
+      blob = null; stop();
+      el.scanner.style.display = 'flex';
+      el.scanner.classList.remove('scanning', 'captured');
+      el.placeholder.style.display = 'flex';
+      el.status.textContent = 'Camera off';
+      el.startBtn.style.display = 'inline-block';
+      el.captureBtn.style.display = 'none';
+      el.retakeBtn.style.display = 'none';
+      el.fallbackHint.style.display = 'block';
+      el.fileField.style.display = 'none';
+      el.fileInput.required = false;
+      el.fileInput.value = '';
+      setSubmittable(false);
+    },
+  };
+}
+const faceLoginScanner = createFaceScanner({
+  scanner: 'faceLoginScanner', video: 'faceLoginVideo', canvas: 'faceLoginCanvas', placeholder: 'faceLoginPlaceholder',
+  status: 'faceLoginScanStatus', startBtn: 'faceLoginStartCam', captureBtn: 'faceLoginCapture', retakeBtn: 'faceLoginRetake',
+  useFileBtn: 'faceLoginUseFile', fallbackHint: 'faceLoginFallbackHint', fileField: 'faceLoginFileField', fileInput: 'faceLoginFile',
+  submitBtn: 'faceLoginSubmitBtn',
+});
+const faceRegisterScanner = createFaceScanner({
+  scanner: 'faceRegisterScanner', video: 'faceRegisterVideo', canvas: 'faceRegisterCanvas', placeholder: 'faceRegisterPlaceholder',
+  status: 'faceRegisterScanStatus', startBtn: 'faceRegisterStartCam', captureBtn: 'faceRegisterCapture', retakeBtn: 'faceRegisterRetake',
+  useFileBtn: 'faceRegisterUseFile', fallbackHint: 'faceRegisterFallbackHint', fileField: 'faceRegisterFileField', fileInput: 'faceRegisterFile',
+  submitBtn: 'faceRegisterSubmitBtn',
+});
+const faceVerifyScanner = createFaceScanner({
+  scanner: 'faceVerifyScanner', video: 'faceVerifyVideo', canvas: 'faceVerifyCanvas', placeholder: 'faceVerifyPlaceholder',
+  status: 'faceVerifyScanStatus', startBtn: 'faceVerifyStartCam', captureBtn: 'faceVerifyCapture', retakeBtn: 'faceVerifyRetake',
+  useFileBtn: 'faceVerifyUseFile', fallbackHint: 'faceVerifyFallbackHint', fileField: 'faceVerifyFileField', fileInput: 'faceVerifyFile',
+  submitBtn: 'faceVerifySubmitBtn',
+});
+function faceScannerPayload(scanner){
+  const blob = scanner.getBlob();
+  if(blob) return blob;
+  return scanner.getFile();
+}
+
 document.getElementById('loginForm').addEventListener('submit', async function(e){
   e.preventDefault();
   try{
@@ -1111,18 +1288,19 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 });
 document.getElementById('faceLoginForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  const input = document.getElementById('faceLoginFile');
-  if(!input.files[0]) return;
+  const payload = faceScannerPayload(faceLoginScanner);
+  if(!payload){ toast('Capture or upload a face photo first', 'err'); return; }
   const steps = document.getElementById('faceLoginSteps');
   resetUploadSteps(steps);
   setUploadStep('uploading', steps);
   const fd = new FormData();
   fd.append('username', document.getElementById('faceLoginUsername').value);
-  fd.append('file', input.files[0]);
+  fd.append('file', payload, 'face.jpg');
   try{
     setUploadStep('processing', steps);
     const data = await api('POST', '/face/login', { auth:false, file: fd });
     setUploadStep('done', steps);
+    faceLoginScanner.reset();
     await completeLogin(data.access_token, 'Face verified — welcome back');
   }catch(err){
     resetUploadSteps(steps);
@@ -1520,29 +1698,31 @@ async function loadSecurity(){
 
 document.getElementById('faceRegisterForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  const input = document.getElementById('faceRegisterFile');
-  if(!input.files[0]) return;
+  const payload = faceScannerPayload(faceRegisterScanner);
+  if(!payload){ toast('Capture or upload a face photo first', 'err'); return; }
   const steps = document.getElementById('faceRegisterSteps');
   resetUploadSteps(steps);
   setUploadStep('uploading', steps);
-  const fd = new FormData(); fd.append('file', input.files[0]);
+  const fd = new FormData(); fd.append('file', payload, 'face.jpg');
   try{
     setUploadStep('processing', steps);
     const res = await api('POST', '/face/register', { file: fd });
     setUploadStep('done', steps);
     toast(res.message || 'Face registered', 'ok');
+    faceRegisterScanner.reset();
   }
   catch(err){ resetUploadSteps(steps); toast('Face register failed: ' + err.message, 'err'); }
 });
 document.getElementById('faceVerifyForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  const input = document.getElementById('faceVerifyFile');
-  if(!input.files[0]) return;
-  const fd = new FormData(); fd.append('file', input.files[0]);
+  const payload = faceScannerPayload(faceVerifyScanner);
+  if(!payload){ toast('Capture or upload a face photo first', 'err'); return; }
+  const fd = new FormData(); fd.append('file', payload, 'face.jpg');
   const box = document.getElementById('faceResult');
   try{
     const res = await api('POST', '/face/verify', { file: fd });
     box.innerHTML = '<div class="result-box ' + (res.verified ? 'match' : 'nomatch') + '">' + (res.verified ? '\u2713 VERIFIED' : '\u2717 NOT VERIFIED') + ' — confidence ' + res.confidence + '</div>';
+    faceVerifyScanner.reset();
   }catch(err){ box.innerHTML = '<div class="result-box nomatch">Error: ' + escapeHtml(err.message) + '</div>'; }
 });
 
