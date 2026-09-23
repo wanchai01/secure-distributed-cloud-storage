@@ -199,7 +199,7 @@
   .user-chip .who .name{font-size:12px; font-weight:600; color:var(--text);}
   .user-chip .who .role{font-size:9.5px; color:var(--text-faint); text-transform:capitalize;}
 
-  .content{padding:26px 30px 70px; max-width:1300px; width:100%;}
+  .content{padding:26px 30px 70px; max-width:1300px; width:100%; margin:0 auto;}
   .view{display:none; animation:fadein .25s ease;}
   .view.active{display:block;}
   @keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
@@ -209,6 +209,14 @@
   .page-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px;}
   .page-head h1{font-size:22px; font-weight:800; margin:0 0 4px; letter-spacing:-0.2px;}
   .page-head p{margin:0; color:var(--text-dim); font-size:13px; max-width:560px;}
+
+  #view-auth.active{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:calc(100vh - 180px); text-align:center;
+  }
+  #view-auth .breadcrumb, #view-auth .page-head, #view-auth .status-line{align-self:center;}
+  #view-auth .page-head{flex-direction:column; align-items:center; text-align:center;}
+  #view-auth .card{text-align:left; width:420px;}
 
   .card{background:var(--panel); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:18px;}
   .card h2{font-size:14.5px; margin:0 0 4px; font-weight:700;}
