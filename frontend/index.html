@@ -551,6 +551,7 @@
           <div class="auth-toggle">
             <button id="toggleLogin" class="active">Log in</button>
             <button id="toggleRegister">Register</button>
+            <button id="toggleFaceLogin">Face Login</button>
           </div>
           <form id="loginForm">
             <div class="field"><label>Username</label><input type="text" id="loginUsername" required autocomplete="username"></div>
@@ -563,7 +564,16 @@
             <div class="field"><label>Password</label><input type="password" id="regPassword" required minlength="6"></div>
             <button class="btn" type="submit" style="width:100%;">Create account</button>
           </form>
-          <p class="hint">Session token is kept in memory only — refreshing this page logs you out. Nothing is written to browser storage.</p>
+          <form id="faceLoginForm" style="display:none;">
+            <div class="field"><label>Username</label><input type="text" id="faceLoginUsername" required autocomplete="username"></div>
+            <div class="field"><label>Face photo</label><input type="file" id="faceLoginFile" accept="image/*" required></div>
+            <div class="upload-steps" id="faceLoginSteps" style="margin-bottom:14px;">
+              <span class="upload-step" data-step="uploading">Uploading</span><span class="upload-step" data-step="processing">Matching face</span><span class="upload-step" data-step="done">Signed in</span>
+            </div>
+            <button class="btn" type="submit" style="width:100%;">Verify &amp; sign in</button>
+            <p class="hint" style="margin-top:10px;">You must have registered your face already (Face Auth page, after a normal login) for this to work. Prototype matching — no liveness check, not for anything sensitive.</p>
+          </form>
+          <p class="hint" id="authHint">Session token is kept in memory only — refreshing this page logs you out. Nothing is written to browser storage.</p>
         </div>
         <div class="status-line up" style="margin-top:4px;"><span class="pulse-dot"></span><span id="authHealthLine">Checking system status…</span></div>
       </section>
@@ -1047,18 +1057,22 @@ async function checkConnection(){
   }
 }
 
-document.getElementById('toggleLogin').addEventListener('click', function(){
-  document.getElementById('toggleLogin').classList.add('active');
-  document.getElementById('toggleRegister').classList.remove('active');
-  document.getElementById('loginForm').style.display = 'block';
-  document.getElementById('registerForm').style.display = 'none';
-});
-document.getElementById('toggleRegister').addEventListener('click', function(){
-  document.getElementById('toggleRegister').classList.add('active');
-  document.getElementById('toggleLogin').classList.remove('active');
-  document.getElementById('registerForm').style.display = 'block';
-  document.getElementById('loginForm').style.display = 'none';
-});
+const AUTH_TABS = {
+  login: { toggle: 'toggleLogin', form: 'loginForm' },
+  register: { toggle: 'toggleRegister', form: 'registerForm' },
+  face: { toggle: 'toggleFaceLogin', form: 'faceLoginForm' },
+};
+function showAuthTab(name){
+  Object.keys(AUTH_TABS).forEach(function(key){
+    const t = AUTH_TABS[key];
+    document.getElementById(t.toggle).classList.toggle('active', key === name);
+    document.getElementById(t.form).style.display = key === name ? 'block' : 'none';
+  });
+  document.getElementById('authHint').style.display = name === 'face' ? 'none' : 'block';
+}
+document.getElementById('toggleLogin').addEventListener('click', function(){ showAuthTab('login'); });
+document.getElementById('toggleRegister').addEventListener('click', function(){ showAuthTab('register'); });
+document.getElementById('toggleFaceLogin').addEventListener('click', function(){ showAuthTab('face'); });
 document.getElementById('registerForm').addEventListener('submit', async function(e){
   e.preventDefault();
   try{
@@ -1072,6 +1086,19 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     document.getElementById('loginUsername').value = document.getElementById('regUsername').value;
   }catch(err){ toast('Register failed: ' + err.message, 'err'); }
 });
+async function completeLogin(accessToken, welcomeMsg){
+  state.token = accessToken;
+  const me = await api('GET', '/auth/me');
+  state.username = me.username; state.role = me.role;
+  document.getElementById('userChip').style.display = 'flex';
+  document.getElementById('avatarInitial').textContent = initials(me.username);
+  document.getElementById('whoName').textContent = me.username;
+  document.getElementById('whoRole').textContent = me.role;
+  document.getElementById('sessionInfo').textContent = 'Logged in as ' + me.username + ' (' + me.role + ').';
+  toast(welcomeMsg || ('Logged in as ' + me.username), 'ok');
+  showView('overview');
+  refreshBell();
+}
 document.getElementById('loginForm').addEventListener('submit', async function(e){
   e.preventDefault();
   try{
@@ -1079,18 +1106,28 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
       username: document.getElementById('loginUsername').value,
       password: document.getElementById('loginPassword').value,
     }});
-    state.token = data.access_token;
-    const me = await api('GET', '/auth/me');
-    state.username = me.username; state.role = me.role;
-    document.getElementById('userChip').style.display = 'flex';
-    document.getElementById('avatarInitial').textContent = initials(me.username);
-    document.getElementById('whoName').textContent = me.username;
-    document.getElementById('whoRole').textContent = me.role;
-    document.getElementById('sessionInfo').textContent = 'Logged in as ' + me.username + ' (' + me.role + ').';
-    toast('Logged in as ' + me.username, 'ok');
-    showView('overview');
-    refreshBell();
+    await completeLogin(data.access_token);
   }catch(err){ toast('Login failed: ' + err.message, 'err'); }
+});
+document.getElementById('faceLoginForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const input = document.getElementById('faceLoginFile');
+  if(!input.files[0]) return;
+  const steps = document.getElementById('faceLoginSteps');
+  resetUploadSteps(steps);
+  setUploadStep('uploading', steps);
+  const fd = new FormData();
+  fd.append('username', document.getElementById('faceLoginUsername').value);
+  fd.append('file', input.files[0]);
+  try{
+    setUploadStep('processing', steps);
+    const data = await api('POST', '/face/login', { auth:false, file: fd });
+    setUploadStep('done', steps);
+    await completeLogin(data.access_token, 'Face verified — welcome back');
+  }catch(err){
+    resetUploadSteps(steps);
+    toast('Face login failed: ' + err.message, 'err');
+  }
 });
 function doLogout(){
   state.token = null; state.username = null; state.role = null;
