@@ -824,7 +824,7 @@
         <div class="page-head"><h1>Settings</h1><p>Local session &amp; connection preferences — nothing here is sent anywhere.</p></div>
         <div class="card" style="max-width:480px;">
           <h2>Connection</h2>
-          <div class="field"><label>API base URL</label><input type="text" id="apiBaseSettings" value="http://127.0.0.1:8000"></div>
+          <div class="field"><label>API base URL</label><input type="text" id="apiBaseSettings" value="https://secure-distributed-cloud-storage.onrender.com"></div>
           <button class="btn secondary small" id="applyApiBase">Apply</button>
         </div>
         <div class="card" style="max-width:480px;">
@@ -848,7 +848,7 @@
 </div>
 
 <script>
-const state = { apiBase: 'http://127.0.0.1:8000', token: null, username: null, role: null };
+const state = { apiBase: 'https://secure-distributed-cloud-storage.onrender.com', token: null, username: null, role: null };
 const cache = { files: [], admin: { kind: null, rows: [], cols: [] }, nodes: [], fileView: 'list' };
 
 function toast(msg, kind){
