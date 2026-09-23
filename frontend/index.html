@@ -906,7 +906,7 @@ function showView(name){
 }
 document.querySelectorAll('.nav-item').forEach(function(btn){
   btn.addEventListener('click', function(){
-    if(state.token || btn.dataset.view === 'nodes' || btn.dataset.view === 'security') showView(btn.dataset.view);
+    if(state.token || btn.dataset.view === 'nodes' || btn.dataset.view === 'security' || btn.dataset.view === 'settings') showView(btn.dataset.view);
     else toast('Log in first', 'err');
   });
 });
